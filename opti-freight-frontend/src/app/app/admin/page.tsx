@@ -1,39 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useOptiFreight } from "@/hooks/use-opti-freight";
 import { useToast } from "@/hooks/use-toast";
-import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 export default function AdminPage() {
-  const { initSale, fetchSales, sales, isLoading } = useOptiFreight();
-  const { publicKey, connected } = useSolanaWallet();
+  const { fetchSales, sales, isLoading } = useOptiFreight();
   const { toast } = useToast();
   const [isInitializing, setIsInitializing] = useState(false);
+  const [saleInfo, setSaleInfo] = useState<any>(null);
+
+  // Auto-inicializar venta al cargar la página
+  useEffect(() => {
+    handleInitSale();
+  }, []);
 
   const handleInitSale = async () => {
-    if (!connected || !publicKey) {
-      toast({
-        variant: "destructive",
-        title: "Wallet not connected",
-        description: "Please connect your wallet first",
-      });
-      return;
-    }
-
     setIsInitializing(true);
 
     try {
-      const result = await initSale();
+      const response = await fetch('/api/init-sale', {
+        method: 'POST',
+      });
 
-      if (result.success) {
+      const data = await response.json();
+
+      if (data.success) {
+        setSaleInfo(data);
         toast({
-          title: "Sale Initialized!",
-          description: `Successfully created sale for 1000 tokens. TX: ${result.signature}`,
+          title: "Sale Ready!",
+          description: data.message,
           duration: 7000,
         });
 
@@ -43,10 +43,11 @@ export default function AdminPage() {
         toast({
           variant: "destructive",
           title: "Failed to initialize sale",
-          description: result.error || "Unknown error",
+          description: data.error || data.details || "Unknown error",
         });
       }
     } catch (error: any) {
+      console.error('Error initializing sale:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -61,24 +62,36 @@ export default function AdminPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Admin Panel</h1>
-        <p className="text-muted-foreground">Manage sales and marketplace</p>
+        <p className="text-muted-foreground">Sale initialization status</p>
       </div>
 
-      {!connected && (
+      {isInitializing && (
         <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Wallet not connected</AlertTitle>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertTitle>Initializing Sale...</AlertTitle>
           <AlertDescription>
-            Please connect your treasury wallet to manage sales
+            Please wait while the sale is being initialized automatically
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {saleInfo && (
+        <Alert>
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertTitle>Sale Ready!</AlertTitle>
+          <AlertDescription>
+            {saleInfo.message}
+            <br />
+            <span className="font-mono text-xs">Sale Address: {saleInfo.saleAddress}</span>
           </AlertDescription>
         </Alert>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Initialize New Sale</CardTitle>
+          <CardTitle>Sale Configuration</CardTitle>
           <CardDescription>
-            Create a new sale of 1000 tokens at $200 each
+            Automatic sale initialization of 1000 tokens at $200 each
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -97,13 +110,24 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {saleInfo?.sale && (
+            <div className="p-4 border rounded-lg space-y-2">
+              <p className="font-medium">Sale Status</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>Sold: {saleInfo.sale.sold} / {saleInfo.sale.total}</div>
+                <div>Active: {saleInfo.sale.active ? 'Yes' : 'No'}</div>
+              </div>
+            </div>
+          )}
+
           <Button
             onClick={handleInitSale}
-            disabled={!connected || isInitializing}
+            disabled={isInitializing}
+            variant="outline"
             className="w-full"
           >
             {isInitializing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isInitializing ? "Initializing..." : "Initialize Sale"}
+            {isInitializing ? "Checking..." : "Refresh Sale Status"}
           </Button>
         </CardContent>
       </Card>
