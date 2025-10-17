@@ -19,7 +19,7 @@ import optiFreightIdl from '@/lib/idl/opti_freight.json';
 
 // Constantes del Programa y Tokens
 const PROGRAM_ID = new PublicKey('AoR4goYR4q6mR1X6gB51CX67EbgzGmSYd6eWPN4A4ddq');
-const USDC_MINT = new PublicKey('Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
+const USDC_MINT = new PublicKey('3PS5pGyQXco4WVFeF7eLvSKfM86E4kzC73d7VrpfhEo9');
 const PLATFORM_WALLET = new PublicKey('468zRBWHvREsy67no7yVviW69i173dZt25XKsDqKeCNh');
 
 // Constantes de Logica de Negocio

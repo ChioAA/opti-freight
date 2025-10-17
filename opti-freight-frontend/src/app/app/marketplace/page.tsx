@@ -17,7 +17,13 @@ import { useWallet } from "@/contexts/auth-context";
 import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import {
+  getAssociatedTokenAddress,
+  createTransferInstruction,
+  TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountInstruction,
+  getAccount
+} from '@solana/spl-token';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -151,14 +157,22 @@ export default function MarketplacePage() {
     setIsProcessing(true);
 
     try {
-      // USDC Mint address (tu token de prueba)
+      // USDC Mint address - usar el mismo que use-opti-freight.ts
       const USDC_MINT = new PublicKey('3PS5pGyQXco4WVFeF7eLvSKfM86E4kzC73d7VrpfhEo9');
 
       // Wallet concentradora (destino de los fondos)
       const TREASURY_WALLET = new PublicKey('6tfek9cks8XPLA7h7u5acWVYVmFZ4Ef3gm5KEAESLM6m');
 
       // Calcular monto a transferir (totalCost en USDC con 6 decimales)
-      const amountInLamports = totalCost * 1_000_000; // USDC tiene 6 decimales
+      const amountInLamports = Math.floor(totalCost * 1_000_000); // USDC tiene 6 decimales
+
+      console.log('Payment details:', {
+        amount: totalCost,
+        amountInLamports,
+        mint: USDC_MINT.toString(),
+        buyer: publicKey.toString(),
+        treasury: TREASURY_WALLET.toString()
+      });
 
       // Obtener las cuentas de token asociadas
       const fromTokenAccount = await getAssociatedTokenAddress(
@@ -171,6 +185,47 @@ export default function MarketplacePage() {
         TREASURY_WALLET
       );
 
+      console.log('Token accounts:', {
+        from: fromTokenAccount.toString(),
+        to: toTokenAccount.toString()
+      });
+
+      // Crear transacción
+      const transaction = new Transaction();
+
+      // Verificar si la cuenta destino existe, si no, crearla
+      try {
+        await getAccount(connection, toTokenAccount);
+        console.log('Treasury token account exists');
+      } catch (err) {
+        console.log('Creating treasury token account...');
+        // Si la cuenta no existe, agregarla a la transacción
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            publicKey, // payer
+            toTokenAccount, // ata
+            TREASURY_WALLET, // owner
+            USDC_MINT // mint
+          )
+        );
+      }
+
+      // Verificar balance del usuario
+      try {
+        const fromAccount = await getAccount(connection, fromTokenAccount);
+        const balance = Number(fromAccount.amount) / 1_000_000;
+        console.log(`Your USDC balance: ${balance}`);
+
+        if (balance < totalCost) {
+          throw new Error(`Insufficient USDC balance. You have ${balance.toFixed(2)} USDC but need ${totalCost} USDC`);
+        }
+      } catch (err: any) {
+        if (err.message.includes('Insufficient')) {
+          throw err;
+        }
+        throw new Error('You do not have a USDC token account. Please add USDC to your wallet first.');
+      }
+
       // Crear la instrucción de transferencia
       const transferInstruction = createTransferInstruction(
         fromTokenAccount,
@@ -181,26 +236,29 @@ export default function MarketplacePage() {
         TOKEN_PROGRAM_ID
       );
 
-      // Crear y enviar la transacción
-      const transaction = new Transaction().add(transferInstruction);
+      transaction.add(transferInstruction);
 
       // Obtener el blockhash reciente
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
+      console.log('Requesting signature from Phantom...');
+
       // Solicitar firma a Phantom
       const { signature } = await (window as any).solana.signAndSendTransaction(transaction);
+
+      console.log('Transaction sent:', signature);
 
       // Esperar confirmación
       const confirmation = await connection.confirmTransaction({
         signature,
         blockhash,
         lastValidBlockHeight
-      });
+      }, 'confirmed');
 
       if (confirmation.value.err) {
-        throw new Error('Transaction failed');
+        throw new Error('Transaction failed: ' + JSON.stringify(confirmation.value.err));
       }
 
       console.log(`Investment successful! Signature: ${signature}`);
