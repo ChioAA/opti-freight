@@ -1,0 +1,28 @@
+[package]
+name = "opti-freight"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+name = "opti_freight"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.32.1", features = [] }
+anchor-spl = { version = "0.32.1", features = [] }
+
+[profile.release]
+overflow-checks = false
+lto = true
+codegen-units = 1
+opt-level = "z"
+strip = true
+panic = "abort"
