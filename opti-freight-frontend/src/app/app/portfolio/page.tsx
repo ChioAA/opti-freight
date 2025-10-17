@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DollarSign, Percent, TrendingUp, Wallet, Minus, Plus } from "lucide-react";
 import { portfolioData, returnsHistoryData, type NFT } from "@/lib/data";
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/contexts/language-context";
+import { format } from "date-fns";
 
 const chartConfig = {
   returns: {
@@ -128,18 +129,44 @@ const content = {
 
 
 export default function PortfolioPage() {
-  const { totalInvestment, monthlyReturn, apy, nfts } = portfolioData;
   const { isWalletConnected, connectWallet } = useWallet();
   const { user } = useAuth();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = content[language];
-  
+
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null);
   const [tokensToSell, setTokensToSell] = useState(1);
   const [sellPrice, setSellPrice] = useState(250);
+  const [userNfts, setUserNfts] = useState<NFT[]>([]);
+  const [totalInvestment, setTotalInvestment] = useState(0);
+
+  // Cargar compras del localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const purchases = JSON.parse(localStorage.getItem('opti-freight-purchases') || '[]');
+
+      // Convertir compras a formato NFT
+      const nfts: NFT[] = purchases.map((purchase: any) => ({
+        id: purchase.id,
+        name: purchase.name,
+        series: purchase.listing?.name?.replace('Opti-Freight ', '') || purchase.series,
+        value: purchase.value,
+        purchaseDate: format(new Date(purchase.purchaseDate), 'MMM d, yyyy'),
+        expiryDate: format(new Date(purchase.expiryDate), 'MMM d, yyyy'),
+      }));
+
+      setUserNfts(nfts);
+
+      // Calcular inversión total
+      const total = purchases.reduce((sum: number, p: any) => sum + p.value, 0);
+      setTotalInvestment(total);
+    }
+  }, [isWalletConnected]);
+
+  const { monthlyReturn, apy } = portfolioData;
 
   const handleSellClick = (nft: NFT) => {
     setSelectedNft(nft);
@@ -338,18 +365,26 @@ export default function PortfolioPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {nfts.map((nft) => (
-                      <TableRow key={nft.id}>
-                        <TableCell className="font-medium">{nft.name}</TableCell>
-                        <TableCell><Badge variant="secondary">{nft.series}</Badge></TableCell>
-                        <TableCell>{nft.purchaseDate}</TableCell>
-                        <TableCell>{nft.expiryDate}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(nft.value)}</TableCell>
-                        <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => handleSellClick(nft)}>{t.sell}</Button>
+                    {userNfts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          {language === 'es' ? 'No tienes tokens aún. Ve al Marketplace para invertir.' : 'No tokens yet. Go to Marketplace to invest.'}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      userNfts.map((nft) => (
+                        <TableRow key={nft.id}>
+                          <TableCell className="font-medium">{nft.name}</TableCell>
+                          <TableCell><Badge variant="secondary">{nft.series}</Badge></TableCell>
+                          <TableCell>{nft.purchaseDate}</TableCell>
+                          <TableCell>{nft.expiryDate}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(nft.value)}</TableCell>
+                          <TableCell className="text-right">
+                              <Button variant="outline" size="sm" onClick={() => handleSellClick(nft)}>{t.sell}</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
             </CardContent>

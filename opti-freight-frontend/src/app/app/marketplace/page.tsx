@@ -264,6 +264,26 @@ export default function MarketplacePage() {
       console.log(`Investment successful! Signature: ${signature}`);
       console.log(`Transferred ${totalCost} USDC to treasury`);
 
+      // Guardar la compra en localStorage para que aparezca en el portafolio
+      const purchase = {
+        id: `${selectedListing.id}-${Date.now()}`,
+        name: selectedListing.name,
+        series: selectedListing.name.replace('Opti-Freight ', ''),
+        value: totalCost,
+        tokens: tokensToBuy,
+        purchaseDate: new Date().toISOString(),
+        expiryDate: new Date(Date.now() + selectedListing.termYears * 365 * 24 * 60 * 60 * 1000).toISOString(),
+        signature,
+        listing: selectedListing,
+      };
+
+      // Obtener compras existentes
+      const existingPurchases = JSON.parse(localStorage.getItem('opti-freight-purchases') || '[]');
+      existingPurchases.push(purchase);
+      localStorage.setItem('opti-freight-purchases', JSON.stringify(existingPurchases));
+
+      console.log('Purchase saved to localStorage:', purchase);
+
       toast({
         title: t.investmentSuccessTitle,
         description: t.investmentSuccessDescription(tokensToBuy, selectedListing.name),
