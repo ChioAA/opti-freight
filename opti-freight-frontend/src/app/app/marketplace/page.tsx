@@ -15,15 +15,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/contexts/auth-context";
 import { useSolanaWallet } from "@/hooks/use-solana-wallet";
-import { useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import {
-  getAssociatedTokenAddress,
-  createTransferInstruction,
-  TOKEN_PROGRAM_ID,
-  createAssociatedTokenAccountInstruction,
-  getAccount
-} from '@solana/spl-token';
+import { useOptiFreight } from "@/hooks/use-opti-freight";
+import { PublicKey } from '@solana/web3.js';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -126,7 +119,7 @@ export default function MarketplacePage() {
   const { toast } = useToast();
   const { isWalletConnected, connectWallet } = useWallet();
   const { publicKey, connected } = useSolanaWallet();
-  const { connection } = useConnection();
+  const { buyPrimary, sales, fetchSales } = useOptiFreight();
   const { language } = useLanguage();
 
   const t = content[language];
@@ -154,117 +147,49 @@ export default function MarketplacePage() {
       return;
     }
 
+    // Verificar que exista una venta activa
+    if (sales.length === 0) {
+      toast({
+        variant: "destructive",
+        title: language === 'es' ? "No hay ventas disponibles" : "No sales available",
+        description: language === 'es'
+          ? "Por favor contacta al administrador para inicializar una venta."
+          : "Please contact admin to initialize a sale.",
+      });
+      return;
+    }
+
+    const activeSale = sales.find(s => s.account.active);
+    if (!activeSale) {
+      toast({
+        variant: "destructive",
+        title: language === 'es' ? "No hay ventas activas" : "No active sales",
+        description: language === 'es'
+          ? "Todas las ventas están cerradas."
+          : "All sales are closed.",
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // USDC Mint address - usar el mismo que use-opti-freight.ts
-      const USDC_MINT = new PublicKey('3PS5pGyQXco4WVFeF7eLvSKfM86E4kzC73d7VrpfhEo9');
-
-      // Wallet concentradora (destino de los fondos)
-      const TREASURY_WALLET = new PublicKey('6tfek9cks8XPLA7h7u5acWVYVmFZ4Ef3gm5KEAESLM6m');
-
-      // Calcular monto a transferir (totalCost en USDC con 6 decimales)
-      const amountInLamports = Math.floor(totalCost * 1_000_000); // USDC tiene 6 decimales
-
-      console.log('Payment details:', {
-        amount: totalCost,
-        amountInLamports,
-        mint: USDC_MINT.toString(),
-        buyer: publicKey.toString(),
-        treasury: TREASURY_WALLET.toString()
+      console.log('Calling buyPrimary with:', {
+        saleAddress: activeSale.publicKey.toString(),
+        amount: tokensToBuy,
+        buyer: publicKey.toString()
       });
 
-      // Obtener las cuentas de token asociadas
-      const fromTokenAccount = await getAssociatedTokenAddress(
-        USDC_MINT,
-        publicKey
-      );
+      // Llamar a la función buyPrimary del smart contract
+      const result = await buyPrimary(activeSale.publicKey, tokensToBuy);
 
-      const toTokenAccount = await getAssociatedTokenAddress(
-        USDC_MINT,
-        TREASURY_WALLET
-      );
-
-      console.log('Token accounts:', {
-        from: fromTokenAccount.toString(),
-        to: toTokenAccount.toString()
-      });
-
-      // Crear transacción
-      const transaction = new Transaction();
-
-      // Verificar si la cuenta destino existe, si no, crearla
-      try {
-        await getAccount(connection, toTokenAccount);
-        console.log('Treasury token account exists');
-      } catch (err) {
-        console.log('Creating treasury token account...');
-        // Si la cuenta no existe, agregarla a la transacción
-        transaction.add(
-          createAssociatedTokenAccountInstruction(
-            publicKey, // payer
-            toTokenAccount, // ata
-            TREASURY_WALLET, // owner
-            USDC_MINT // mint
-          )
-        );
+      if (!result.success) {
+        throw new Error(result.error || 'Purchase failed');
       }
 
-      // Verificar balance del usuario
-      try {
-        const fromAccount = await getAccount(connection, fromTokenAccount);
-        const balance = Number(fromAccount.amount) / 1_000_000;
-        console.log(`Your USDC balance: ${balance}`);
+      console.log(`Investment successful! Signature: ${result.signature}`);
 
-        if (balance < totalCost) {
-          throw new Error(`Insufficient USDC balance. You have ${balance.toFixed(2)} USDC but need ${totalCost} USDC`);
-        }
-      } catch (err: any) {
-        if (err.message.includes('Insufficient')) {
-          throw err;
-        }
-        throw new Error('You do not have a USDC token account. Please add USDC to your wallet first.');
-      }
-
-      // Crear la instrucción de transferencia
-      const transferInstruction = createTransferInstruction(
-        fromTokenAccount,
-        toTokenAccount,
-        publicKey,
-        amountInLamports,
-        [],
-        TOKEN_PROGRAM_ID
-      );
-
-      transaction.add(transferInstruction);
-
-      // Obtener el blockhash reciente
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-
-      console.log('Requesting signature from Phantom...');
-
-      // Solicitar firma a Phantom
-      const { signature } = await (window as any).solana.signAndSendTransaction(transaction);
-
-      console.log('Transaction sent:', signature);
-
-      // Esperar confirmación
-      const confirmation = await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight
-      }, 'confirmed');
-
-      if (confirmation.value.err) {
-        throw new Error('Transaction failed: ' + JSON.stringify(confirmation.value.err));
-      }
-
-      console.log(`Investment successful! Signature: ${signature}`);
-      console.log(`Transferred ${totalCost} USDC to treasury`);
-
-      // Guardar la compra en localStorage para que aparezca en el portafolio
+      // Guardar la compra en localStorage para referencia rápida
       const purchase = {
         id: `${selectedListing.id}-${Date.now()}`,
         name: selectedListing.name,
@@ -273,16 +198,19 @@ export default function MarketplacePage() {
         tokens: tokensToBuy,
         purchaseDate: new Date().toISOString(),
         expiryDate: new Date(Date.now() + selectedListing.termYears * 365 * 24 * 60 * 60 * 1000).toISOString(),
-        signature,
+        signature: result.signature,
+        saleAddress: activeSale.publicKey.toString(),
         listing: selectedListing,
       };
 
-      // Obtener compras existentes
       const existingPurchases = JSON.parse(localStorage.getItem('opti-freight-purchases') || '[]');
       existingPurchases.push(purchase);
       localStorage.setItem('opti-freight-purchases', JSON.stringify(existingPurchases));
 
       console.log('Purchase saved to localStorage:', purchase);
+
+      // Refrescar la lista de ventas para actualizar el contador
+      await fetchSales();
 
       toast({
         title: t.investmentSuccessTitle,
