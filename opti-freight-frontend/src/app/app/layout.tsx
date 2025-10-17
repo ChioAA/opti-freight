@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
+      <div className="grid w-full lg:grid-cols-[280px_1fr] min-h-screen">
         <aside className="hidden border-r bg-card lg:block">
           {sidebarContent}
         </aside>
