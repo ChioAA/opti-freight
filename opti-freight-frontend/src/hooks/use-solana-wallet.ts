@@ -84,9 +84,9 @@ export function useUSDCBalance() {
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // USDC Mint address on Devnet
+  // USDC Mint address on Devnet (custom test token with 1M USDC)
   // For mainnet, use: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-  const USDC_MINT_DEVNET = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+  const USDC_MINT_DEVNET = new PublicKey('3PS5pGyQXco4WVFeF7eLvSKfM86E4kzC73d7VrpfhEo9');
 
   useEffect(() => {
     if (publicKey && connected) {
