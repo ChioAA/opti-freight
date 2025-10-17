@@ -7,7 +7,7 @@ import { PublicKey } from '@solana/web3.js';
 
 export const PROGRAM_IDS = {
   // Unified Program (RECOMMENDED - includes all functionality)
-  OPTI_FREIGHT: new PublicKey('AoR4goYR4q6mR1X6gB51CX67EbgzGmSYd6eWPN4A4ddq'),
+  OPTI_FREIGHT: new PublicKey('HAsA9cM5SRhGKNNrQy9c7JF3rCsGwRC6A5ycNbKxpnWU'),
 
   // Legacy Programs (for backwards compatibility)
   ASSET_NFT: new PublicKey('2ESdz2tgd6m8VPEcBnBPsndboKgMSDMQRUn94xD8YpUW'),

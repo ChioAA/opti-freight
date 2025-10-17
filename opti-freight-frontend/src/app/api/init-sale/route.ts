@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Connection, Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
-import { Program, AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import { Program, AnchorProvider } from '@coral-xyz/anchor';
+import { Wallet } from '@coral-xyz/anchor/dist/cjs/provider';
 import bs58 from 'bs58';
 import optiFreightIdl from '@/lib/idl/opti_freight.json';
 
-const PROGRAM_ID = new PublicKey('AoR4goYR4q6mR1X6gB51CX67EbgzGmSYd6eWPN4A4ddq');
+const PROGRAM_ID = new PublicKey('HAsA9cM5SRhGKNNrQy9c7JF3rCsGwRC6A5ycNbKxpnWU');
 
 export async function POST(request: Request) {
   try {
