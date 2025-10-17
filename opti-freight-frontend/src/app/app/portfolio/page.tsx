@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/contexts/language-context";
 import { format } from "date-fns";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddress, getAccount } from "@solana/spl-token";
 
 const chartConfig = {
   returns: {
@@ -29,6 +31,10 @@ const chartConfig = {
 const PRIMARY_TOKEN_COST = 200;
 const SALE_PENALTY_FEE = 50;
 const MARKETPLACE_FEE_PERCENTAGE = 0.03;
+
+// Token mint addresses
+const OPTIFREIGHT_SERIE1_MINT = "9Y2hkFT7Gtb6rJQSJJMxHw7m5VeGFZVoJvxgGRjKzBsQ";
+const SOLANA_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_HOST || "https://api.devnet.solana.com";
 
 const content = {
   en: {
@@ -142,29 +148,74 @@ export default function PortfolioPage() {
   const [sellPrice, setSellPrice] = useState(250);
   const [userNfts, setUserNfts] = useState<NFT[]>([]);
   const [totalInvestment, setTotalInvestment] = useState(0);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
 
-  // Cargar compras del localStorage
+  // Cargar tokens reales desde la blockchain
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const purchases = JSON.parse(localStorage.getItem('opti-freight-purchases') || '[]');
+    const loadTokensFromBlockchain = async () => {
+      if (!isWalletConnected || !user?.wallet) {
+        setUserNfts([]);
+        setTotalInvestment(0);
+        return;
+      }
 
-      // Convertir compras a formato NFT
-      const nfts: NFT[] = purchases.map((purchase: any) => ({
-        id: purchase.id,
-        name: purchase.name,
-        series: purchase.listing?.name?.replace('Opti-Freight ', '') || purchase.series,
-        value: purchase.value,
-        purchaseDate: format(new Date(purchase.purchaseDate), 'MMM d, yyyy'),
-        expiryDate: format(new Date(purchase.expiryDate), 'MMM d, yyyy'),
-      }));
+      setIsLoadingTokens(true);
+      try {
+        const connection = new Connection(SOLANA_RPC, 'confirmed');
+        const userPublicKey = new PublicKey(user.wallet);
 
-      setUserNfts(nfts);
+        // Obtener la cuenta de token asociada para Serie 1
+        const mintPublicKey = new PublicKey(OPTIFREIGHT_SERIE1_MINT);
+        const tokenAccountAddress = await getAssociatedTokenAddress(
+          mintPublicKey,
+          userPublicKey
+        );
 
-      // Calcular inversión total
-      const total = purchases.reduce((sum: number, p: any) => sum + p.value, 0);
-      setTotalInvestment(total);
-    }
-  }, [isWalletConnected]);
+        try {
+          // Intentar obtener la cuenta de token
+          const tokenAccount = await getAccount(connection, tokenAccountAddress);
+          const tokenBalance = Number(tokenAccount.amount);
+
+          console.log('✅ Token balance from blockchain:', tokenBalance);
+
+          if (tokenBalance > 0) {
+            // Crear NFT entry para los tokens de Serie 1
+            const purchaseDate = new Date(); // Fecha actual como placeholder
+            const expiryDate = new Date();
+            expiryDate.setFullYear(expiryDate.getFullYear() + 3); // 3 años de plazo
+
+            const nft: NFT = {
+              id: `OPTIF1-${user.wallet.slice(0, 8)}`,
+              name: 'Opti-Freight Serie 1',
+              series: 'Serie 1',
+              value: tokenBalance * PRIMARY_TOKEN_COST,
+              purchaseDate: format(purchaseDate, 'MMM d, yyyy'),
+              expiryDate: format(expiryDate, 'MMM d, yyyy'),
+            };
+
+            setUserNfts([nft]);
+            setTotalInvestment(tokenBalance * PRIMARY_TOKEN_COST);
+          } else {
+            setUserNfts([]);
+            setTotalInvestment(0);
+          }
+        } catch (error: any) {
+          // Si la cuenta no existe, el usuario no tiene tokens
+          console.log('No token account found or no tokens owned');
+          setUserNfts([]);
+          setTotalInvestment(0);
+        }
+      } catch (error) {
+        console.error('Error loading tokens from blockchain:', error);
+        setUserNfts([]);
+        setTotalInvestment(0);
+      } finally {
+        setIsLoadingTokens(false);
+      }
+    };
+
+    loadTokensFromBlockchain();
+  }, [isWalletConnected, user]);
 
   const { monthlyReturn, apy } = portfolioData;
 
@@ -365,7 +416,13 @@ export default function PortfolioPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {userNfts.length === 0 ? (
+                    {isLoadingTokens ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          {language === 'es' ? 'Cargando tokens desde blockchain...' : 'Loading tokens from blockchain...'}
+                        </TableCell>
+                      </TableRow>
+                    ) : userNfts.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           {language === 'es' ? 'No tienes tokens aún. Ve al Marketplace para invertir.' : 'No tokens yet. Go to Marketplace to invest.'}
