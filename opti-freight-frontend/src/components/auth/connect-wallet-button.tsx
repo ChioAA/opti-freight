@@ -1,7 +1,7 @@
-
 "use client";
 
-import { useWallet, useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/auth-context";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -24,6 +24,7 @@ const content = {
         logOut: "Log Out",
         fiatOnRampToastTitle: "Fiat On-Ramp",
         fiatOnRampToastDescription: "This would integrate with a service like MoonPay or Stripe.",
+        walletConnected: "Wallet Connected",
     },
     es: {
         buyCrypto: "Comprar Cripto",
@@ -32,13 +33,14 @@ const content = {
         logOut: "Cerrar Sesión",
         fiatOnRampToastTitle: "Rampa Fiat",
         fiatOnRampToastDescription: "Esto se integraría con un servicio como MoonPay o Stripe.",
+        walletConnected: "Billetera Conectada",
     }
 }
 
 
 export function ConnectWalletButton() {
   const { user, logout } = useAuth();
-  const { isWalletConnected, connectWallet, disconnectWallet } = useWallet();
+  const { connected, address, balance, connectWallet, disconnectWallet, formatAddress } = useSolanaWallet();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = content[language];
@@ -70,11 +72,16 @@ export function ConnectWalletButton() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {isWalletConnected ? (
+        {connected && address ? (
           <>
             <DropdownMenuItem disabled>
                 <Wallet className="mr-2 h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium text-muted-foreground">0xAb...cdef</span>
+                <span className="text-sm font-medium text-muted-foreground">{formatAddress(address)}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled>
+                <span className="text-xs text-muted-foreground ml-6">
+                  {balance !== null ? `${balance.toFixed(4)} SOL` : 'Loading...'}
+                </span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleBuyCrypto}>
               <Landmark className="mr-2 h-4 w-4 text-primary" />

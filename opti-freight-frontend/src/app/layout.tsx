@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/contexts/auth-context';
 import { LanguageProvider } from '@/contexts/language-context';
+import { SolanaWalletProvider } from '@/contexts/solana-wallet-provider';
 
 export const metadata: Metadata = {
   title: 'Opti-Freight',
@@ -27,12 +28,14 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased', 'min-h-screen bg-background')}>
-        <LanguageProvider>
+        <SolanaWalletProvider>
+          <LanguageProvider>
             <AuthProvider>
-                {children}
-                <Toaster />
+              {children}
+              <Toaster />
             </AuthProvider>
-        </LanguageProvider>
+          </LanguageProvider>
+        </SolanaWalletProvider>
       </body>
     </html>
   );
