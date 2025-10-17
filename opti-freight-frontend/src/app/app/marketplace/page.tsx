@@ -14,6 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/contexts/auth-context";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
+import { useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -112,8 +116,11 @@ const content = {
 export default function MarketplacePage() {
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [tokensToBuy, setTokensToBuy] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { isWalletConnected, connectWallet } = useWallet();
+  const { publicKey, connected } = useSolanaWallet();
+  const { connection } = useConnection();
   const { language } = useLanguage();
 
   const t = content[language];
@@ -129,10 +136,10 @@ export default function MarketplacePage() {
     setSelectedListing(null);
   };
 
-  const handleConfirmInvestment = () => {
+  const handleConfirmInvestment = async () => {
     if (!selectedListing) return;
 
-    if (!isWalletConnected) {
+    if (!isWalletConnected || !connected || !publicKey) {
       connectWallet();
       toast({
         title: t.connectWalletToastTitle,
@@ -140,16 +147,85 @@ export default function MarketplacePage() {
       });
       return;
     }
-    
-    console.log(`Investing ${tokensToBuy} tokens in ${selectedListing.name}`);
-    
-    toast({
-      title: t.investmentSuccessTitle,
-      description: t.investmentSuccessDescription(tokensToBuy, selectedListing.name),
-      duration: 5000,
-    });
-    
-    handleCloseBuyDialog();
+
+    setIsProcessing(true);
+
+    try {
+      // USDC Mint address (tu token de prueba)
+      const USDC_MINT = new PublicKey('3PS5pGyQXco4WVFeF7eLvSKfM86E4kzC73d7VrpfhEo9');
+
+      // Wallet concentradora (destino de los fondos)
+      const TREASURY_WALLET = new PublicKey('6tfek9cks8XPLA7h7u5acWVYVmFZ4Ef3gm5KEAESLM6m');
+
+      // Calcular monto a transferir (totalCost en USDC con 6 decimales)
+      const amountInLamports = totalCost * 1_000_000; // USDC tiene 6 decimales
+
+      // Obtener las cuentas de token asociadas
+      const fromTokenAccount = await getAssociatedTokenAddress(
+        USDC_MINT,
+        publicKey
+      );
+
+      const toTokenAccount = await getAssociatedTokenAddress(
+        USDC_MINT,
+        TREASURY_WALLET
+      );
+
+      // Crear la instrucción de transferencia
+      const transferInstruction = createTransferInstruction(
+        fromTokenAccount,
+        toTokenAccount,
+        publicKey,
+        amountInLamports,
+        [],
+        TOKEN_PROGRAM_ID
+      );
+
+      // Crear y enviar la transacción
+      const transaction = new Transaction().add(transferInstruction);
+
+      // Obtener el blockhash reciente
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
+
+      // Solicitar firma a Phantom
+      const { signature } = await (window as any).solana.signAndSendTransaction(transaction);
+
+      // Esperar confirmación
+      const confirmation = await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight
+      });
+
+      if (confirmation.value.err) {
+        throw new Error('Transaction failed');
+      }
+
+      console.log(`Investment successful! Signature: ${signature}`);
+      console.log(`Transferred ${totalCost} USDC to treasury`);
+
+      toast({
+        title: t.investmentSuccessTitle,
+        description: t.investmentSuccessDescription(tokensToBuy, selectedListing.name),
+        duration: 5000,
+      });
+
+      handleCloseBuyDialog();
+
+    } catch (error: any) {
+      console.error('Investment error:', error);
+      toast({
+        variant: "destructive",
+        title: language === 'es' ? "Error en la transacción" : "Transaction Error",
+        description: error.message || (language === 'es'
+          ? "No se pudo completar la inversión. Verifica tu balance de USDC."
+          : "Could not complete investment. Check your USDC balance."),
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const totalCost = selectedListing ? tokensToBuy * selectedListing.tokenPrice : 0;
@@ -347,8 +423,10 @@ export default function MarketplacePage() {
              </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseBuyDialog}>{t.cancel}</Button>
-            <Button onClick={handleConfirmInvestment}>{t.confirmInvestment}</Button>
+            <Button variant="outline" onClick={handleCloseBuyDialog} disabled={isProcessing}>{t.cancel}</Button>
+            <Button onClick={handleConfirmInvestment} disabled={isProcessing}>
+              {isProcessing ? (language === 'es' ? 'Procesando...' : 'Processing...') : t.confirmInvestment}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
