@@ -274,7 +274,7 @@ export default function MarketplacePage() {
 
         <TabsContent value="primary">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
-            {marketplaceListings.map((listing) => {
+            {marketplaceListings.filter(listing => listing.active).map((listing) => {
               const tokensSold = (listing.amountRaised / listing.totalValue) * (listing.totalValue / listing.tokenPrice);
               const totalTokens = listing.totalValue / listing.tokenPrice;
               const progress = (listing.amountRaised / listing.totalValue) * 100;

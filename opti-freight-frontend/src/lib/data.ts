@@ -59,6 +59,8 @@ export type MarketplaceListing = {
     apy: number;
     imageId: string;
     termYears: number;
+    tokenMint?: string; // Dirección del token mint (opcional para series futuras)
+    active: boolean; // Si está activa y disponible para compra
 };
 
 export const marketplaceListings: MarketplaceListing[] = [
@@ -67,33 +69,39 @@ export const marketplaceListings: MarketplaceListing[] = [
     name: 'Opti-Freight Serie 1',
     descriptionKey: 'serie1Description',
     totalValue: 200000,
-    amountRaised: 90000,
+    amountRaised: 0, // Empezamos en 0, se actualiza con ventas reales
     tokenPrice: 200,
     apy: 18.5,
     imageId: 'trailer-1',
     termYears: 5,
+    tokenMint: '9Y2hkFT7Gtb6rJQSJJMxHw7m5VeGFZVoJvxgGRjKzBsQ',
+    active: true, // Solo Serie 1 está activa
   },
   {
     id: 'CASCADIA-01',
     name: 'Opti-Freight Serie 2',
     descriptionKey: 'serie2Description',
     totalValue: 200000,
-    amountRaised: 150000,
+    amountRaised: 0,
     tokenPrice: 200,
     apy: 20.1,
     imageId: 'trailer-2',
     termYears: 5,
+    tokenMint: undefined, // Aún no minteada
+    active: false, // Se activará cuando Serie 1 se agote
   },
   {
     id: 'KW-T680-01',
     name: 'Opti-Freight Serie 3',
     descriptionKey: 'serie3Description',
     totalValue: 200000,
-    amountRaised: 40000,
+    amountRaised: 0,
     tokenPrice: 200,
     apy: 17.2,
     imageId: 'trailer-4',
     termYears: 5,
+    tokenMint: undefined, // Aún no minteada
+    active: false, // Se activará cuando Serie 2 se agote
   },
 ];
 
