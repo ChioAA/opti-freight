@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Connection, Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
-import { Program, AnchorProvider } from '@coral-xyz/anchor';
-import { Wallet } from '@coral-xyz/anchor/dist/cjs/provider';
+import * as anchor from '@coral-xyz/anchor';
 import bs58 from 'bs58';
 import optiFreightIdl from '@/lib/idl/opti_freight.json';
 
@@ -29,11 +28,11 @@ export async function POST(request: Request) {
     );
 
     // Crear provider
-    const wallet = new Wallet(treasuryKeypair);
-    const provider = new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
+    const wallet = new anchor.Wallet(treasuryKeypair);
+    const provider = new anchor.AnchorProvider(connection, wallet, { commitment: 'confirmed' });
 
     // Crear programa
-    const program = new Program(optiFreightIdl as any, PROGRAM_ID, provider);
+    const program = new anchor.Program(optiFreightIdl as any, provider);
 
     // Derivar PDA para la venta
     const [salePda] = PublicKey.findProgramAddressSync(
