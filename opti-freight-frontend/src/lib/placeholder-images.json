@@ -1,0 +1,28 @@
+{
+  "placeholderImages": [
+    {
+      "id": "trailer-1",
+      "description": "A modern semi-trailer truck on a highway.",
+      "imageUrl": "https://picsum.photos/seed/trailer1/600/400",
+      "imageHint": "truck highway"
+    },
+    {
+      "id": "trailer-2",
+      "description": "A fleet of trucks at a depot.",
+      "imageUrl": "https://picsum.photos/seed/trailer2/600/400",
+      "imageHint": "trucks depot"
+    },
+    {
+      "id": "trailer-3",
+      "description": "Close-up of a truck's wheel and chassis.",
+      "imageUrl": "https://picsum.photos/seed/trailer3/600/400",
+      "imageHint": "truck wheel"
+    },
+    {
+      "id": "trailer-4",
+      "description": "A trailer being loaded at a warehouse.",
+      "imageUrl": "https://picsum.photos/seed/trailer4/600/400",
+      "imageHint": "truck loading"
+    }
+  ]
+}

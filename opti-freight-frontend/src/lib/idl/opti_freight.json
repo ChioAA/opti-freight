@@ -1,0 +1,124 @@
+{
+  "address": "AoR4goYR4q6mR1X6gB51CX67EbgzGmSYd6eWPN4A4ddq",
+  "metadata": {
+    "name": "opti_freight",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "buy_primary",
+      "discriminator": [89, 86, 227, 49, 41, 118, 66, 248],
+      "accounts": [
+        {"name": "buyer", "writable": true, "signer": true},
+        {"name": "sale", "writable": true},
+        {"name": "buyer_usdc", "writable": true},
+        {"name": "seller_usdc", "writable": true},
+        {"name": "platform_usdc", "writable": true},
+        {"name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}
+      ],
+      "args": [{"name": "amount", "type": "u16"}]
+    },
+    {
+      "name": "buy_secondary",
+      "discriminator": [228, 157, 240, 161, 43, 120, 226, 50],
+      "accounts": [
+        {"name": "buyer", "writable": true, "signer": true},
+        {"name": "listing", "writable": true},
+        {"name": "buyer_usdc", "writable": true},
+        {"name": "seller_usdc", "writable": true},
+        {"name": "platform_usdc", "writable": true},
+        {"name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}
+      ],
+      "args": [{"name": "amount", "type": "u16"}]
+    },
+    {
+      "name": "cancel_listing",
+      "discriminator": [41, 183, 50, 232, 230, 233, 157, 70],
+      "accounts": [
+        {"name": "seller", "writable": true, "signer": true, "relations": ["listing"]},
+        {"name": "listing", "writable": true}
+      ],
+      "args": []
+    },
+    {
+      "name": "close_sale",
+      "discriminator": [124, 201, 1, 146, 231, 103, 193, 152],
+      "accounts": [
+        {"name": "authority", "writable": true, "signer": true, "relations": ["sale"]},
+        {"name": "sale", "writable": true}
+      ],
+      "args": []
+    },
+    {
+      "name": "create_listing",
+      "discriminator": [18, 168, 45, 24, 191, 31, 117, 54],
+      "accounts": [
+        {"name": "seller", "writable": true, "signer": true},
+        {"name": "listing", "writable": true, "pda": {"seeds": [{"kind": "const", "value": [108, 105, 115, 116, 105, 110, 103]}, {"kind": "account", "path": "seller"}]}},
+        {"name": "system_program", "address": "11111111111111111111111111111111"}
+      ],
+      "args": [{"name": "price", "type": "u64"}, {"name": "amount", "type": "u16"}]
+    },
+    {
+      "name": "distribute_monthly",
+      "discriminator": [138, 85, 130, 1, 255, 234, 102, 53],
+      "accounts": [
+        {"name": "user", "writable": true, "signer": true},
+        {"name": "pool", "writable": true},
+        {"name": "user_usdc", "writable": true},
+        {"name": "pool_auth"},
+        {"name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}
+      ],
+      "args": [{"name": "user_tokens", "type": "u16"}]
+    },
+    {
+      "name": "init_sale",
+      "discriminator": [41, 197, 251, 217, 167, 153, 95, 49],
+      "accounts": [
+        {"name": "authority", "writable": true, "signer": true},
+        {"name": "sale", "writable": true, "pda": {"seeds": [{"kind": "const", "value": [115, 97, 108, 101]}, {"kind": "account", "path": "authority"}]}},
+        {"name": "system_program", "address": "11111111111111111111111111111111"}
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {"name": "Listing", "discriminator": [218, 32, 50, 73, 43, 134, 26, 58]},
+    {"name": "Sale", "discriminator": [202, 64, 232, 171, 178, 172, 34, 183]}
+  ],
+  "errors": [
+    {"code": 6000, "name": "NotActive", "msg": "Not active"},
+    {"code": 6001, "name": "SoldOut", "msg": "Sold out"},
+    {"code": 6002, "name": "PriceTooLow", "msg": "Price too low, min $250"},
+    {"code": 6003, "name": "WrongDay", "msg": "Wrong day, must be 20th"}
+  ],
+  "types": [
+    {
+      "name": "Listing",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {"name": "seller", "type": "pubkey"},
+          {"name": "price", "type": "u64"},
+          {"name": "amount", "type": "u16"},
+          {"name": "active", "type": "bool"},
+          {"name": "bump", "type": "u8"}
+        ]
+      }
+    },
+    {
+      "name": "Sale",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {"name": "authority", "type": "pubkey"},
+          {"name": "total", "type": "u16"},
+          {"name": "sold", "type": "u16"},
+          {"name": "active", "type": "bool"},
+          {"name": "bump", "type": "u8"}
+        ]
+      }
+    }
+  ]
+}
