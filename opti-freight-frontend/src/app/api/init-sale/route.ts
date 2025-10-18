@@ -1,11 +1,31 @@
 import { NextResponse } from 'next/server';
-import { Connection, Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from '@solana/web3.js';
 import { Program, AnchorProvider } from '@coral-xyz/anchor';
-import { Wallet } from '@coral-xyz/anchor/dist/cjs/nodewallet';
 import bs58 from 'bs58';
 import optiFreightIdl from '@/lib/idl/opti_freight.json';
 
 const PROGRAM_ID = new PublicKey('HAsA9cM5SRhGKNNrQy9c7JF3rCsGwRC6A5ycNbKxpnWU');
+
+// Implementación simple de Wallet compatible con Anchor
+class SimpleWallet {
+  constructor(readonly payer: Keypair) {}
+
+  async signTransaction<T extends Transaction>(tx: T): Promise<T> {
+    tx.partialSign(this.payer);
+    return tx;
+  }
+
+  async signAllTransactions<T extends Transaction>(txs: T[]): Promise<T[]> {
+    return txs.map((tx) => {
+      tx.partialSign(this.payer);
+      return tx;
+    });
+  }
+
+  get publicKey(): PublicKey {
+    return this.payer.publicKey;
+  }
+}
 
 export async function POST() {
   try {
@@ -32,9 +52,9 @@ export async function POST() {
       'confirmed'
     );
 
-    // Crear provider
-    const wallet = new Wallet(treasuryKeypair);
-    const provider = new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
+    // Crear provider con nuestra implementación simple de Wallet
+    const wallet = new SimpleWallet(treasuryKeypair);
+    const provider = new AnchorProvider(connection, wallet as any, { commitment: 'confirmed' });
 
     // Crear programa
     const program = new Program(optiFreightIdl as any, provider);
