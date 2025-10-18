@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
 import {
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
@@ -16,6 +16,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { buyerAddress, amount, signature } = body;
 
+    console.log('📥 Transfer request received:', { buyerAddress, amount, signature });
+
     if (!buyerAddress || !amount) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
@@ -23,11 +25,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const { TREASURY_PRIVATE_KEY, NEXT_PUBLIC_SOLANA_RPC_HOST } = process.env;
+    const { TREASURY_PRIVATE_KEY, NEXT_PUBLIC_SOLANA_RPC_HOST, OPTIFREIGHT_TOKEN_MINT } = process.env;
 
-    if (!TREASURY_PRIVATE_KEY) {
+    if (!TREASURY_PRIVATE_KEY || !OPTIFREIGHT_TOKEN_MINT) {
+      console.error('❌ Missing environment variables:', {
+        hasTreasuryKey: !!TREASURY_PRIVATE_KEY,
+        hasTokenMint: !!OPTIFREIGHT_TOKEN_MINT
+      });
       return NextResponse.json(
-        { error: 'Treasury private key not configured' },
+        { error: 'Server configuration error: Missing treasury key or token mint' },
         { status: 500 }
       );
     }
@@ -36,6 +42,8 @@ export async function POST(request: Request) {
     const secretKey = bs58.decode(TREASURY_PRIVATE_KEY);
     const treasuryKeypair = Keypair.fromSecretKey(secretKey);
 
+    console.log('🔑 Treasury wallet:', treasuryKeypair.publicKey.toString());
+
     // Conectar a Solana
     const connection = new Connection(
       NEXT_PUBLIC_SOLANA_RPC_HOST || 'https://api.devnet.solana.com',
@@ -43,126 +51,144 @@ export async function POST(request: Request) {
     );
 
     const buyerPublicKey = new PublicKey(buyerAddress);
+    const tokenMintPublicKey = new PublicKey(OPTIFREIGHT_TOKEN_MINT);
 
-    // Leer lista de NFTs disponibles
-    const nftListPath = path.join(process.cwd(), '..', 'opti-freight-contracts', 'nfts-serie1.json');
+    console.log('🪙 Token Mint:', tokenMintPublicKey.toString());
 
-    let nftData;
+    // Leer datos de los tokens para actualizar disponibilidad
+    const tokenDataPath = path.join(process.cwd(), '..', 'opti-freight-contracts', 'tokens-serie1.json');
+    let tokenData;
+
     try {
-      const fileContent = fs.readFileSync(nftListPath, 'utf-8');
-      nftData = JSON.parse(fileContent);
+      const fileContent = fs.readFileSync(tokenDataPath, 'utf-8');
+      tokenData = JSON.parse(fileContent);
+      console.log('📊 Token data loaded:', {
+        available: tokenData.availableTokens,
+        total: tokenData.totalSupply
+      });
     } catch (error) {
+      console.warn('⚠️ Could not read token data file:', error);
+      tokenData = null;
+    }
+
+    // Verificar disponibilidad
+    if (tokenData && tokenData.availableTokens < amount) {
       return NextResponse.json(
-        { error: 'NFT list not found. Please mint NFTs first.' },
+        { error: `Only ${tokenData.availableTokens} tokens available, but ${amount} requested` },
+        { status: 400 }
+      );
+    }
+
+    // Obtener cuentas de token asociadas
+    const fromTokenAccount = await getAssociatedTokenAddress(
+      tokenMintPublicKey,
+      treasuryKeypair.publicKey
+    );
+
+    const toTokenAccount = await getAssociatedTokenAddress(
+      tokenMintPublicKey,
+      buyerPublicKey
+    );
+
+    console.log('💼 Token accounts:', {
+      from: fromTokenAccount.toString(),
+      to: toTokenAccount.toString()
+    });
+
+    // Verificar balance de la treasury
+    try {
+      const treasuryTokenAccountInfo = await getAccount(connection, fromTokenAccount);
+      console.log('💰 Treasury balance:', treasuryTokenAccountInfo.amount.toString());
+
+      if (Number(treasuryTokenAccountInfo.amount) < amount) {
+        return NextResponse.json(
+          { error: `Treasury has insufficient tokens. Available: ${treasuryTokenAccountInfo.amount}` },
+          { status: 500 }
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error checking treasury balance:', error);
+      return NextResponse.json(
+        { error: 'Could not verify treasury token balance' },
         { status: 500 }
       );
     }
 
-    if (!nftData.nftMints || nftData.nftMints.length === 0) {
-      return NextResponse.json(
-        { error: 'No NFTs available' },
-        { status: 400 }
+    // Verificar si la cuenta del comprador existe
+    let createAtaIx = null;
+    try {
+      await getAccount(connection, toTokenAccount);
+      console.log('✅ Buyer token account already exists');
+    } catch (error) {
+      console.log('🆕 Creating new token account for buyer');
+      // Crear ATA para el comprador
+      createAtaIx = createAssociatedTokenAccountInstruction(
+        treasuryKeypair.publicKey, // payer
+        toTokenAccount,
+        buyerPublicKey, // owner
+        tokenMintPublicKey
       );
     }
 
-    // Tomar los primeros X NFTs disponibles
-    const nftsToTransfer = nftData.nftMints.slice(0, amount);
+    // Crear instrucción de transferencia
+    const transferIx = createTransferInstruction(
+      fromTokenAccount,
+      toTokenAccount,
+      treasuryKeypair.publicKey,
+      amount, // Cantidad de tokens
+      [],
+      TOKEN_PROGRAM_ID
+    );
 
-    if (nftsToTransfer.length < amount) {
-      return NextResponse.json(
-        { error: `Only ${nftsToTransfer.length} NFTs available, but ${amount} requested` },
-        { status: 400 }
-      );
+    // Crear y enviar transacción
+    const transaction = new Transaction();
+
+    if (createAtaIx) {
+      transaction.add(createAtaIx);
     }
+    transaction.add(transferIx);
 
-    const transferredNfts = [];
+    const { blockhash } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = treasuryKeypair.publicKey;
 
-    // Transferir cada NFT
-    for (const nftMint of nftsToTransfer) {
+    // Firmar y enviar
+    transaction.sign(treasuryKeypair);
+    const txSignature = await connection.sendRawTransaction(transaction.serialize());
+
+    console.log('📤 Transaction sent:', txSignature);
+    console.log('⏳ Waiting for confirmation...');
+
+    await connection.confirmTransaction(txSignature, 'confirmed');
+
+    console.log(`✅ Transferred ${amount} token(s) to ${buyerAddress}. TX: ${txSignature}`);
+
+    // Actualizar archivo de datos si existe
+    if (tokenData) {
+      tokenData.availableTokens -= amount;
       try {
-        const mintPublicKey = new PublicKey(nftMint);
-
-        // Obtener cuentas de token asociadas
-        const fromTokenAccount = await getAssociatedTokenAddress(
-          mintPublicKey,
-          treasuryKeypair.publicKey
-        );
-
-        const toTokenAccount = await getAssociatedTokenAddress(
-          mintPublicKey,
-          buyerPublicKey
-        );
-
-        // Verificar si la cuenta del comprador existe
-        let createAtaIx = null;
-        try {
-          await getAccount(connection, toTokenAccount);
-        } catch (error) {
-          // Crear ATA para el comprador
-          createAtaIx = createAssociatedTokenAccountInstruction(
-            treasuryKeypair.publicKey, // payer
-            toTokenAccount,
-            buyerPublicKey, // owner
-            mintPublicKey
-          );
-        }
-
-        // Crear instrucción de transferencia
-        const transferIx = createTransferInstruction(
-          fromTokenAccount,
-          toTokenAccount,
-          treasuryKeypair.publicKey,
-          1, // 1 NFT
-          [],
-          TOKEN_PROGRAM_ID
-        );
-
-        // Crear y enviar transacción
-        const { Transaction } = await import('@solana/web3.js');
-        const transaction = new Transaction();
-
-        if (createAtaIx) {
-          transaction.add(createAtaIx);
-        }
-        transaction.add(transferIx);
-
-        const { blockhash } = await connection.getLatestBlockhash();
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = treasuryKeypair.publicKey;
-
-        // Firmar y enviar
-        transaction.sign(treasuryKeypair);
-        const txSignature = await connection.sendRawTransaction(transaction.serialize());
-        await connection.confirmTransaction(txSignature, 'confirmed');
-
-        transferredNfts.push({
-          nftMint: nftMint,
-          signature: txSignature,
-        });
-
-        console.log(`✅ Transferred NFT ${nftMint} to ${buyerAddress}. TX: ${txSignature}`);
+        fs.writeFileSync(tokenDataPath, JSON.stringify(tokenData, null, 2));
+        console.log(`📝 Updated token data. Remaining: ${tokenData.availableTokens}`);
       } catch (error) {
-        console.error(`❌ Error transferring NFT ${nftMint}:`, error);
+        console.error('⚠️ Could not update token data file:', error);
       }
     }
 
-    // Actualizar lista de NFTs (remover los transferidos)
-    nftData.nftMints = nftData.nftMints.slice(amount);
-    fs.writeFileSync(nftListPath, JSON.stringify(nftData, null, 2));
-
-    console.log(`📝 Updated NFT list. Remaining: ${nftData.nftMints.length}`);
-
     return NextResponse.json({
       success: true,
-      message: `Successfully transferred ${transferredNfts.length} NFT(s)`,
-      transferredNfts,
-      remainingNfts: nftData.nftMints.length,
+      message: `Successfully transferred ${amount} token(s)`,
+      txSignature,
+      buyerAddress,
+      amount,
+      tokenMint: tokenMintPublicKey.toString(),
+      remainingTokens: tokenData ? tokenData.availableTokens : null,
     });
   } catch (error: any) {
-    console.error('Error transferring NFTs:', error);
+    console.error('❌ Error transferring tokens:', error);
     return NextResponse.json(
       {
-        error: 'Failed to transfer NFTs',
+        success: false,
+        error: 'Failed to transfer tokens',
         details: error.message,
       },
       { status: 500 }
