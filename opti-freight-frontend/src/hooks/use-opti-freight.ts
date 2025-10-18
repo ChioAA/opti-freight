@@ -520,7 +520,7 @@ export function useOptiFreight() {
     }
 
     try {
-      const salesAccounts = await program.account.sale.all();
+      const salesAccounts = await (program.account as any).sale.all();
       setSales(salesAccounts as ProgramAccount<Sale>[]);
       return salesAccounts as ProgramAccount<Sale>[];
     } catch (err) {
@@ -549,7 +549,7 @@ export function useOptiFreight() {
     }
 
     try {
-      const listingsAccounts = await program.account.listing.all();
+      const listingsAccounts = await (program.account as any).listing.all();
       setListings(listingsAccounts as ProgramAccount<Listing>[]);
       return listingsAccounts as ProgramAccount<Listing>[];
     } catch (err) {
@@ -576,7 +576,7 @@ export function useOptiFreight() {
       if (!program) return null;
 
       try {
-        const saleAccount = await program.account.sale.fetch(salePublicKey);
+        const saleAccount = await (program.account as any).sale.fetch(salePublicKey);
         return saleAccount as Sale;
       } catch (err) {
         console.error('Error fetching sale:', err);
@@ -594,7 +594,7 @@ export function useOptiFreight() {
       if (!program) return null;
 
       try {
-        const listingAccount = await program.account.listing.fetch(listingPublicKey);
+        const listingAccount = await (program.account as any).listing.fetch(listingPublicKey);
         return listingAccount as Listing;
       } catch (err) {
         console.error('Error fetching listing:', err);
