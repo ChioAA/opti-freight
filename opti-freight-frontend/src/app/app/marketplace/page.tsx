@@ -162,7 +162,8 @@ export default function MarketplacePage() {
             : "Automatically preparing the sale. Please wait.",
         });
 
-        const result = await initSale();
+        const response = await fetch('/api/init-sale', { method: 'POST' });
+        const result = await response.json();
 
         if (result.success) {
           // Refrescar sales
