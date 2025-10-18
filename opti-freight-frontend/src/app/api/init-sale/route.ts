@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { Connection, Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
-import { Program, AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import { Program, AnchorProvider } from '@coral-xyz/anchor';
+import { Wallet } from '@coral-xyz/anchor/dist/cjs/nodewallet';
 import bs58 from 'bs58';
 import optiFreightIdl from '@/lib/idl/opti_freight.json';
 
 const PROGRAM_ID = new PublicKey('HAsA9cM5SRhGKNNrQy9c7JF3rCsGwRC6A5ycNbKxpnWU');
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const { TREASURY_PRIVATE_KEY, NEXT_PUBLIC_SOLANA_RPC_HOST } = process.env;
 
@@ -17,9 +18,13 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('🚀 Initializing sale...');
+
     // Crear keypair desde la private key
     const secretKey = bs58.decode(TREASURY_PRIVATE_KEY);
     const treasuryKeypair = Keypair.fromSecretKey(secretKey);
+
+    console.log('Treasury:', treasuryKeypair.publicKey.toString());
 
     // Conectar a Solana
     const connection = new Connection(
@@ -40,10 +45,13 @@ export async function POST(request: Request) {
       PROGRAM_ID
     );
 
+    console.log('Sale PDA:', salePda.toString());
+
     // Verificar si ya existe una venta
     try {
-      const existingSale = await program.account.sale.fetch(salePda);
+      const existingSale = await (program.account as any).sale.fetch(salePda);
       if (existingSale) {
+        console.log('✅ Sale already exists!');
         return NextResponse.json({
           success: true,
           message: 'Sale already exists',
@@ -62,6 +70,8 @@ export async function POST(request: Request) {
     }
 
     // Inicializar la venta
+    console.log('⏳ Sending transaction...');
+
     const tx = await program.methods
       .initSale()
       .accounts({
@@ -72,15 +82,15 @@ export async function POST(request: Request) {
       })
       .rpc();
 
-    console.log('Sale initialized. Transaction:', tx);
+    console.log('✅ Sale initialized! Transaction:', tx);
 
     // Obtener la venta recién creada
-    const sale = await program.account.sale.fetch(salePda);
+    const sale = await (program.account as any).sale.fetch(salePda);
 
     return NextResponse.json({
       success: true,
       message: 'Sale initialized successfully',
-      transaction: tx,
+      signature: tx,
       saleAddress: salePda.toString(),
       sale: {
         authority: sale.authority.toString(),
@@ -90,9 +100,10 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Error initializing sale:', error);
+    console.error('❌ Error initializing sale:', error);
     return NextResponse.json(
       {
+        success: false,
         error: 'Failed to initialize sale',
         details: error.message,
       },
