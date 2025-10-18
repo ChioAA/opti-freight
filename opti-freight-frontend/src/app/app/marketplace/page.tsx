@@ -189,6 +189,38 @@ export default function MarketplacePage() {
 
       console.log(`Investment successful! Signature: ${result.signature}`);
 
+      // Transferir tokens automáticamente después del pago exitoso
+      console.log('Transferring tokens to buyer...');
+      try {
+        const transferResponse = await fetch('/api/transfer-nft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            buyerAddress: publicKey.toString(),
+            amount: tokensToBuy,
+            signature: result.signature,
+          }),
+        });
+
+        const transferData = await transferResponse.json();
+
+        if (transferData.success) {
+          console.log('✅ Tokens transferred successfully:', transferData);
+        } else {
+          console.error('❌ Token transfer failed:', transferData.error);
+          toast({
+            title: language === 'es' ? 'Pago exitoso, pero...' : 'Payment successful, but...',
+            description: language === 'es'
+              ? 'El pago se completó pero hubo un problema transfiriendo los tokens. Contacta soporte.'
+              : 'Payment completed but there was an issue transferring tokens. Contact support.',
+            variant: 'destructive',
+            duration: 10000,
+          });
+        }
+      } catch (transferError: any) {
+        console.error('Error calling transfer API:', transferError);
+      }
+
       // Guardar la compra en localStorage para referencia rápida
       const purchase = {
         id: `${selectedListing.id}-${Date.now()}`,
