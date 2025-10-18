@@ -20,7 +20,7 @@ const optiFreightIdl = JSON.parse(
   fs.readFileSync(path.join(__dirname, "../target/idl/opti_freight.json"), "utf-8")
 );
 
-const PROGRAM_ID = new PublicKey("AoR4goYR4q6mR1X6gB51CX67EbgzGmSYd6eWPN4A4ddq");
+const PROGRAM_ID = new PublicKey("HAsA9cM5SRhGKNNrQy9c7JF3rCsGwRC6A5ycNbKxpnWU");
 
 async function main() {
   console.log("🚀 Initializing Sale for Opti-Freight Serie 1\n");
