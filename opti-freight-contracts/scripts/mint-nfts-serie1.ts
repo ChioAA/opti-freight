@@ -18,7 +18,7 @@ import bs58 from "bs58";
 import fs from "fs";
 
 // Configuración
-const TREASURY_PRIVATE_KEY = "5ikwDPe8kVbfBCfRbmGZ5tcYckwwDyAGJrFSiF3Jo5CG";
+const TREASURY_PRIVATE_KEY = "35Y28X2k6azBTfvKoDKnPcZcvzdmT5zxVpPfahXcwbepu8qPaNBjQJgLyN7Pd1YvwArD4jPKthjkPEQ6CGXC6F83";
 const SERIE_NUMBER = 1;
 const SERIE_NAME = "Opti-Freight Serie 1";
 const SERIE_SYMBOL = "OPTIF-S1";

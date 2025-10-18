@@ -119,8 +119,9 @@ export default function MarketplacePage() {
   const { toast } = useToast();
   const { isWalletConnected, connectWallet } = useWallet();
   const { publicKey, connected } = useSolanaWallet();
-  const { buyPrimary, sales, fetchSales } = useOptiFreight();
+  const { buyPrimary, sales, fetchSales, initSale } = useOptiFreight();
   const { language } = useLanguage();
+  const [autoInitializing, setAutoInitializing] = useState(false);
 
   const t = content[language];
 
@@ -147,26 +148,58 @@ export default function MarketplacePage() {
       return;
     }
 
-    // Verificar que exista una venta activa
-    if (sales.length === 0) {
-      toast({
-        variant: "destructive",
-        title: language === 'es' ? "No hay ventas disponibles" : "No sales available",
-        description: language === 'es'
-          ? "Por favor contacta al administrador para inicializar una venta."
-          : "Please contact admin to initialize a sale.",
-      });
+    // Auto-inicializar venta si no existe
+    let activeSale = sales.find(s => s.account.active);
+
+    if (!activeSale && !autoInitializing) {
+      setAutoInitializing(true);
+
+      try {
+        toast({
+          title: language === 'es' ? "Inicializando venta..." : "Initializing sale...",
+          description: language === 'es'
+            ? "Preparando la venta automáticamente. Espera un momento."
+            : "Automatically preparing the sale. Please wait.",
+        });
+
+        const result = await initSale();
+
+        if (result.success) {
+          // Refrescar sales
+          await fetchSales();
+          activeSale = sales.find(s => s.account.active);
+
+          toast({
+            title: language === 'es' ? "Venta inicializada" : "Sale initialized",
+            description: language === 'es'
+              ? "La venta se ha inicializado correctamente. Intenta comprar de nuevo."
+              : "Sale initialized successfully. Try purchasing again.",
+          });
+        } else {
+          throw new Error(result.error || 'Failed to initialize sale');
+        }
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: language === 'es' ? "Error al inicializar venta" : "Error initializing sale",
+          description: error.message || (language === 'es'
+            ? "No se pudo inicializar la venta automáticamente."
+            : "Could not initialize sale automatically."),
+        });
+      } finally {
+        setAutoInitializing(false);
+        setIsProcessing(false);
+      }
       return;
     }
 
-    const activeSale = sales.find(s => s.account.active);
     if (!activeSale) {
       toast({
         variant: "destructive",
         title: language === 'es' ? "No hay ventas activas" : "No active sales",
         description: language === 'es'
-          ? "Todas las ventas están cerradas."
-          : "All sales are closed.",
+          ? "No se pudo encontrar una venta activa. Intenta de nuevo."
+          : "Could not find an active sale. Try again.",
       });
       return;
     }

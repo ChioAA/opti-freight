@@ -55,133 +55,109 @@ export async function POST(request: Request) {
 
     console.log('🪙 Token Mint:', tokenMintPublicKey.toString());
 
-    // Leer datos de los tokens para actualizar disponibilidad
-    const tokenDataPath = path.join(process.cwd(), '..', 'opti-freight-contracts', 'tokens-serie1.json');
-    let tokenData;
+    // Leer datos de los NFTs
+    const nftDataPath = path.join(process.cwd(), '..', 'opti-freight-contracts', 'nfts-serie1.json');
+    let nftData;
 
     try {
-      const fileContent = fs.readFileSync(tokenDataPath, 'utf-8');
-      tokenData = JSON.parse(fileContent);
-      console.log('📊 Token data loaded:', {
-        available: tokenData.availableTokens,
-        total: tokenData.totalSupply
+      const fileContent = fs.readFileSync(nftDataPath, 'utf-8');
+      nftData = JSON.parse(fileContent);
+      console.log('📊 NFT data loaded:', {
+        available: nftData.nftMints.length,
+        total: nftData.totalNfts
       });
     } catch (error) {
-      console.warn('⚠️ Could not read token data file:', error);
-      tokenData = null;
-    }
-
-    // Verificar disponibilidad
-    if (tokenData && tokenData.availableTokens < amount) {
+      console.error('❌ Could not read NFT data file:', error);
       return NextResponse.json(
-        { error: `Only ${tokenData.availableTokens} tokens available, but ${amount} requested` },
-        { status: 400 }
-      );
-    }
-
-    // Obtener cuentas de token asociadas
-    const fromTokenAccount = await getAssociatedTokenAddress(
-      tokenMintPublicKey,
-      treasuryKeypair.publicKey
-    );
-
-    const toTokenAccount = await getAssociatedTokenAddress(
-      tokenMintPublicKey,
-      buyerPublicKey
-    );
-
-    console.log('💼 Token accounts:', {
-      from: fromTokenAccount.toString(),
-      to: toTokenAccount.toString()
-    });
-
-    // Verificar balance de la treasury
-    try {
-      const treasuryTokenAccountInfo = await getAccount(connection, fromTokenAccount);
-      console.log('💰 Treasury balance:', treasuryTokenAccountInfo.amount.toString());
-
-      if (Number(treasuryTokenAccountInfo.amount) < amount) {
-        return NextResponse.json(
-          { error: `Treasury has insufficient tokens. Available: ${treasuryTokenAccountInfo.amount}` },
-          { status: 500 }
-        );
-      }
-    } catch (error) {
-      console.error('❌ Error checking treasury balance:', error);
-      return NextResponse.json(
-        { error: 'Could not verify treasury token balance' },
+        { error: 'NFT data not available' },
         { status: 500 }
       );
     }
 
-    // Verificar si la cuenta del comprador existe
-    let createAtaIx = null;
-    try {
-      await getAccount(connection, toTokenAccount);
-      console.log('✅ Buyer token account already exists');
-    } catch (error) {
-      console.log('🆕 Creating new token account for buyer');
-      // Crear ATA para el comprador
-      createAtaIx = createAssociatedTokenAccountInstruction(
-        treasuryKeypair.publicKey, // payer
-        toTokenAccount,
-        buyerPublicKey, // owner
-        tokenMintPublicKey
+    // Verificar disponibilidad
+    if (nftData.nftMints.length < amount) {
+      return NextResponse.json(
+        { error: `Only ${nftData.nftMints.length} NFTs available, but ${amount} requested` },
+        { status: 400 }
       );
     }
 
-    // Crear instrucción de transferencia
-    const transferIx = createTransferInstruction(
-      fromTokenAccount,
-      toTokenAccount,
-      treasuryKeypair.publicKey,
-      amount, // Cantidad de tokens
-      [],
-      TOKEN_PROGRAM_ID
-    );
+    // Transferir NFTs uno por uno
+    const transferredNfts = [];
+    const nftsToTransfer = nftData.nftMints.slice(0, amount);
 
-    // Crear y enviar transacción
-    const transaction = new Transaction();
+    for (const nftMint of nftsToTransfer) {
+      const mintPublicKey = new PublicKey(nftMint);
 
-    if (createAtaIx) {
-      transaction.add(createAtaIx);
-    }
-    transaction.add(transferIx);
+      // Obtener cuentas de token asociadas para este NFT
+      const fromTokenAccount = await getAssociatedTokenAddress(
+        mintPublicKey,
+        treasuryKeypair.publicKey
+      );
 
-    const { blockhash } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = treasuryKeypair.publicKey;
+      const toTokenAccount = await getAssociatedTokenAddress(
+        mintPublicKey,
+        buyerPublicKey
+      );
 
-    // Firmar y enviar
-    transaction.sign(treasuryKeypair);
-    const txSignature = await connection.sendRawTransaction(transaction.serialize());
+      console.log(`📦 Transferring NFT ${nftMint} from ${fromTokenAccount.toString()} to ${toTokenAccount.toString()}`);
 
-    console.log('📤 Transaction sent:', txSignature);
-    console.log('⏳ Waiting for confirmation...');
-
-    await connection.confirmTransaction(txSignature, 'confirmed');
-
-    console.log(`✅ Transferred ${amount} token(s) to ${buyerAddress}. TX: ${txSignature}`);
-
-    // Actualizar archivo de datos si existe
-    if (tokenData) {
-      tokenData.availableTokens -= amount;
+      // Verificar si la cuenta del comprador existe
+      const transaction = new Transaction();
       try {
-        fs.writeFileSync(tokenDataPath, JSON.stringify(tokenData, null, 2));
-        console.log(`📝 Updated token data. Remaining: ${tokenData.availableTokens}`);
+        await getAccount(connection, toTokenAccount);
       } catch (error) {
-        console.error('⚠️ Could not update token data file:', error);
+        // Crear ATA para el comprador
+        const createAtaIx = createAssociatedTokenAccountInstruction(
+          treasuryKeypair.publicKey,
+          toTokenAccount,
+          buyerPublicKey,
+          mintPublicKey
+        );
+        transaction.add(createAtaIx);
       }
+
+      // Crear instrucción de transferencia (1 NFT)
+      const transferIx = createTransferInstruction(
+        fromTokenAccount,
+        toTokenAccount,
+        treasuryKeypair.publicKey,
+        1, // 1 NFT único
+        [],
+        TOKEN_PROGRAM_ID
+      );
+
+      transaction.add(transferIx);
+
+      // Enviar transacción
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = treasuryKeypair.publicKey;
+
+      transaction.sign(treasuryKeypair);
+      const txSignature = await connection.sendRawTransaction(transaction.serialize());
+      await connection.confirmTransaction(txSignature, 'confirmed');
+
+      console.log(`✅ Transferred NFT ${nftMint}. TX: ${txSignature}`);
+      transferredNfts.push({ mint: nftMint, signature: txSignature });
+    }
+
+    // Actualizar archivo de datos
+    nftData.nftMints = nftData.nftMints.slice(amount);
+    try {
+      fs.writeFileSync(nftDataPath, JSON.stringify(nftData, null, 2));
+      console.log(`📝 Updated NFT data. Remaining: ${nftData.nftMints.length}`);
+    } catch (error) {
+      console.error('⚠️ Could not update NFT data file:', error);
     }
 
     return NextResponse.json({
       success: true,
-      message: `Successfully transferred ${amount} token(s)`,
-      txSignature,
+      message: `Successfully transferred ${amount} NFT(s)`,
       buyerAddress,
       amount,
-      tokenMint: tokenMintPublicKey.toString(),
-      remainingTokens: tokenData ? tokenData.availableTokens : null,
+      transferredNfts,
+      remainingNfts: nftData.nftMints.length,
     });
   } catch (error: any) {
     console.error('❌ Error transferring tokens:', error);
