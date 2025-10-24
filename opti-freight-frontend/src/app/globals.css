@@ -1,0 +1,286 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 22 96% 54%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 22 96% 54%;
+    --chart-1: 22 96% 54%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 100%;
+    --popover: 240 5.9% 8%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 22 100% 60%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 280 100% 70%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 240 3.7% 12%;
+    --muted-foreground: 240 5% 75%;
+    --accent: 170 100% 60%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 3.7% 25%;
+    --input: 240 3.7% 18%;
+    --ring: 22 100% 60%;
+    --chart-1: 22 100% 65%;
+    --chart-2: 170 100% 60%;
+    --chart-3: 280 100% 70%;
+    --chart-4: 50 100% 65%;
+    --chart-5: 340 100% 65%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Custom scrollbar styles - ALWAYS VISIBLE */
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
+
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: hsl(var(--primary)) hsl(var(--background));
+  }
+
+  *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 6px;
+    border: 3px solid hsl(var(--background));
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.8);
+  }
+
+  /* Forzar scrollbar visible en contenedores principales */
+  body, main, .overflow-auto, [data-radix-scroll-area-viewport] {
+    overflow-y: auto !important;
+    scrollbar-width: auto !important;
+  }
+}
+
+/* ========================================
+   NEON GLOW EFFECTS - Complete Design System
+   ======================================== */
+
+/* Base neon glow utility class */
+.neon-glow {
+  box-shadow: 0 0 10px hsl(var(--primary)),
+              0 0 20px hsl(var(--primary) / 0.5),
+              0 0 30px hsl(var(--primary) / 0.3);
+}
+
+.neon-glow-secondary {
+  box-shadow: 0 0 10px hsl(var(--secondary)),
+              0 0 20px hsl(var(--secondary) / 0.5),
+              0 0 30px hsl(var(--secondary) / 0.3);
+}
+
+.neon-glow-accent {
+  box-shadow: 0 0 10px hsl(var(--accent)),
+              0 0 20px hsl(var(--accent) / 0.5),
+              0 0 30px hsl(var(--accent) / 0.3);
+}
+
+/* Primary button neon effects */
+button[class*="bg-primary"],
+.bg-primary {
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.4),
+              0 0 15px hsl(var(--primary) / 0.2);
+  transition: all 0.3s ease-in-out;
+}
+
+button[class*="bg-primary"]:hover,
+.bg-primary:hover {
+  box-shadow: 0 0 15px hsl(var(--primary)),
+              0 0 30px hsl(var(--primary) / 0.6),
+              0 0 45px hsl(var(--primary) / 0.4);
+  transform: translateY(-2px);
+}
+
+/* Outline button neon effects */
+button[class*="variant-outline"]:hover {
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.5),
+              0 0 20px hsl(var(--primary) / 0.3);
+  border-color: hsl(var(--primary));
+}
+
+/* Cards with neon glow */
+[class*="Card"] > div:first-child,
+.card {
+  transition: all 0.3s ease-in-out;
+}
+
+[class*="Card"]:hover > div:first-child,
+.card:hover {
+  box-shadow: 0 0 15px hsl(var(--primary) / 0.3),
+              0 0 30px hsl(var(--primary) / 0.15),
+              0 4px 20px rgba(0, 0, 0, 0.2);
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+/* Border neon effects */
+[class*="border-primary"] {
+  box-shadow: 0 0 5px hsl(var(--primary) / 0.3);
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+[class*="border-primary"]:hover {
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.5),
+              0 0 20px hsl(var(--primary) / 0.3);
+}
+
+/* Progress bar neon glow */
+[class*="Progress"] [role="progressbar"] {
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.4),
+              0 0 15px hsl(var(--primary) / 0.2);
+}
+
+/* Text glow for headers */
+h1 {
+  text-shadow: 0 0 15px hsl(var(--primary) / 0.6),
+               0 0 25px hsl(var(--primary) / 0.3);
+}
+
+h2 {
+  text-shadow: 0 0 12px hsl(var(--primary) / 0.5),
+               0 0 20px hsl(var(--primary) / 0.25);
+}
+
+h3 {
+  text-shadow: 0 0 8px hsl(var(--primary) / 0.4);
+}
+
+/* Input and select neon focus */
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring)),
+              0 0 10px hsl(var(--primary) / 0.3),
+              0 0 20px hsl(var(--primary) / 0.15);
+  border-color: hsl(var(--primary));
+}
+
+/* Dialog neon overlay */
+[class*="Dialog"] [class*="DialogContent"],
+.dialog-content {
+  box-shadow: 0 0 30px hsl(var(--primary) / 0.4),
+              0 0 60px hsl(var(--primary) / 0.2),
+              0 10px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid hsl(var(--primary) / 0.3);
+}
+
+/* Tab neon active state */
+[class*="TabsTrigger"][data-state="active"] {
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.4),
+              0 0 15px hsl(var(--primary) / 0.2);
+}
+
+/* Table row hover neon */
+[class*="TableRow"]:hover {
+  background: hsl(var(--primary) / 0.05);
+  box-shadow: inset 0 0 15px hsl(var(--primary) / 0.1);
+}
+
+/* Badge neon glow */
+[class*="Badge"] {
+  box-shadow: 0 0 5px hsl(var(--primary) / 0.2);
+}
+
+/* Separator neon glow */
+[class*="Separator"] {
+  box-shadow: 0 0 5px hsl(var(--primary) / 0.2);
+}
+
+/* Video container neon border */
+video {
+  border: 1px solid hsl(var(--primary) / 0.2);
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+}
+
+/* Alert neon border */
+[class*="Alert"] {
+  border: 1px solid hsl(var(--primary) / 0.3);
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.2);
+}
+
+/* Muted background cards with subtle neon */
+[class*="bg-muted"] {
+  box-shadow: inset 0 0 10px hsl(var(--primary) / 0.05);
+}
+
+/* Icon neon glow on hover */
+svg:hover {
+  filter: drop-shadow(0 0 5px hsl(var(--primary) / 0.5));
+  transition: filter 0.3s ease-in-out;
+}
+
+/* Scrollbar neon glow */
+*::-webkit-scrollbar-thumb {
+  box-shadow: 0 0 5px hsl(var(--primary) / 0.4);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.6);
+}
+
+/* Ocultar indicadores de desarrollo de Next.js */
+[data-nextjs-toast-wrapper],
+[data-nextjs-error-overlay],
+nextjs-portal {
+  display: none !important;
+}
+
+/* Ocultar el botón de errores/build en desarrollo */
+button[aria-label*="Build"],
+button[aria-label*="Error"],
+div[data-nextjs-dialog-overlay],
+#__next-build-watcher,
+[id^="nextjs"] {
+  display: none !important;
+}

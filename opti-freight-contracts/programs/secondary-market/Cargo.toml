@@ -1,0 +1,22 @@
+[package]
+name = "secondary-market"
+version = "0.1.0"
+description = "Secondary Market Program"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "secondary_market"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+default = []
+
+[dependencies]
+anchor-lang = { version = "0.32.1", features = ["init-if-needed"] }
+anchor-spl = "0.32.1"
+asset-nft = { path = "../asset-nft", features = ["cpi"] }

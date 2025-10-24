@@ -1,0 +1,272 @@
+{
+  "address": "7x4rNdNN9Szce8qfasDGiV3srApWcJ339t8iGAyKjrga",
+  "metadata": {
+    "name": "opti_freight",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "buy_primary",
+      "discriminator": [89, 86, 227, 49, 41, 118, 66, 248],
+      "accounts": [
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "sale",
+          "writable": true
+        },
+        {
+          "name": "seller",
+          "writable": true
+        },
+        {
+          "name": "platform",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "buy_secondary",
+      "discriminator": [228, 157, 240, 161, 43, 120, 226, 50],
+      "accounts": [
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "listing",
+          "writable": true
+        },
+        {
+          "name": "seller",
+          "writable": true
+        },
+        {
+          "name": "platform",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "cancel_listing",
+      "discriminator": [203, 199, 251, 152, 146, 23, 53, 172],
+      "accounts": [
+        {
+          "name": "seller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "listing",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_sale",
+      "discriminator": [77, 243, 40, 87, 147, 41, 113, 0],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "sale",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_listing",
+      "discriminator": [219, 172, 113, 213, 231, 61, 141, 183],
+      "accounts": [
+        {
+          "name": "seller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "listing",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "distribute_monthly",
+      "discriminator": [121, 178, 236, 190, 126, 18, 128, 214],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "user_tokens",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "init_sale",
+      "discriminator": [167, 179, 188, 155, 54, 187, 33, 205],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "sale",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Listing",
+      "discriminator": [119, 98, 72, 31, 137, 39, 97, 195]
+    },
+    {
+      "name": "Sale",
+      "discriminator": [218, 236, 8, 236, 192, 159, 108, 197]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotActive",
+      "msg": "Not active"
+    },
+    {
+      "code": 6001,
+      "name": "SoldOut",
+      "msg": "Sold out"
+    },
+    {
+      "code": 6002,
+      "name": "PriceTooLow",
+      "msg": "Price too low, min 1.45 SOL"
+    },
+    {
+      "code": 6003,
+      "name": "WrongDay",
+      "msg": "Wrong day, must be 20th"
+    }
+  ],
+  "types": [
+    {
+      "name": "Listing",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "seller",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "u16"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Sale",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "total",
+            "type": "u16"
+          },
+          {
+            "name": "sold",
+            "type": "u16"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

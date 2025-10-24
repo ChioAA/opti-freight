@@ -1,0 +1,13 @@
+{
+  "serie": 1,
+  "name": "Opti-Freight Serie 1",
+  "symbol": "OPTIF1",
+  "decimals": 0,
+  "totalSupply": 1000,
+  "mintAddress": "9Y2hkFT7Gtb6rJQSJJMxHw7m5VeGFZVoJvxgGRjKzBsQ",
+  "treasuryWallet": "H6XLCy6UcVa7rse3EYLcsCFdyxdX6FRGKtLAPtmgMZb5",
+  "treasuryTokenAccount": "ivMQrzhPRvY6VXwDvTooYRVGcr6ma5epgYMMCZhtj3d",
+  "availableTokens": 1000,
+  "createdAt": "2025-10-17T06:34:39.298Z",
+  "mintSignature": "2xwCmVz2skK6ykuFBmCf5r9gWGN5e65X9YMY94rCNGeVB8yscAbZASt24E7yefTdpEdyfDcd9hJuwgLLYQJA6AM3"
+}

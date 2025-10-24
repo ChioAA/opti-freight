@@ -1,0 +1,175 @@
+{
+  "address": "Az1M72qgA5REQjiV789DrSqgMG1UGrL7puRXEqBCAHFQ",
+  "metadata": {
+    "name": "primary_market",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Primary Market Program"
+  },
+  "instructions": [
+    {
+      "name": "buy",
+      "discriminator": [
+        102,
+        6,
+        61,
+        18,
+        1,
+        218,
+        235,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "sale",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "close",
+      "discriminator": [
+        98,
+        165,
+        201,
+        177,
+        108,
+        65,
+        206,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "sale"
+          ]
+        },
+        {
+          "name": "sale",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_sale",
+      "discriminator": [
+        41,
+        197,
+        251,
+        217,
+        167,
+        153,
+        95,
+        49
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "sale",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  108,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "total",
+          "type": "u16"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Sale",
+      "discriminator": [
+        202,
+        64,
+        232,
+        171,
+        178,
+        172,
+        34,
+        183
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotActive",
+      "msg": "Sale not active"
+    },
+    {
+      "code": 6001,
+      "name": "NotEnough",
+      "msg": "Not enough tokens"
+    }
+  ],
+  "types": [
+    {
+      "name": "Sale",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "total",
+            "type": "u16"
+          },
+          {
+            "name": "sold",
+            "type": "u16"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

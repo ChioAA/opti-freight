@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  anchor-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opti-freight-anchor
+    working_dir: /workspace
+    volumes:
+      # Mount the entire contracts directory
+      - .:/workspace
+      # Mount Solana config from host (read-only for security)
+      - ~/.config/solana:/root/.config/solana:ro
+      # Preserve cargo cache for faster rebuilds
+      - cargo-cache:/root/.cargo/registry
+      - cargo-git:/root/.cargo/git
+    environment:
+      - RUST_LOG=info
+      - ANCHOR_WALLET=/root/.config/solana/devnet-wallet.json
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+volumes:
+  cargo-cache:
+  cargo-git:

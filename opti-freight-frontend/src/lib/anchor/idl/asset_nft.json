@@ -1,0 +1,305 @@
+{
+  "address": "2ESjYkkwqZYBkAA6gBprX9xaRhqgPVyMyZLkGVAq7YtU",
+  "metadata": {
+    "name": "asset_nft",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Trailer Asset NFT Program"
+  },
+  "instructions": [
+    {
+      "name": "create_trailer_nft",
+      "discriminator": [
+        98,
+        135,
+        71,
+        42,
+        94,
+        137,
+        245,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "trailer_asset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  105,
+                  108,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        },
+        {
+          "name": "series",
+          "type": "string"
+        },
+        {
+          "name": "total_value",
+          "type": "u64"
+        },
+        {
+          "name": "token_price",
+          "type": "u64"
+        },
+        {
+          "name": "total_tokens",
+          "type": "u16"
+        },
+        {
+          "name": "apy",
+          "type": "u16"
+        },
+        {
+          "name": "term_years",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "set_lock_status",
+      "discriminator": [
+        222,
+        34,
+        244,
+        182,
+        56,
+        197,
+        150,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "trailer_asset"
+          ]
+        },
+        {
+          "name": "trailer_asset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  105,
+                  108,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trailer_asset.mint",
+                "account": "TrailerAsset"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "is_locked",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "update_metadata",
+      "discriminator": [
+        170,
+        182,
+        43,
+        239,
+        97,
+        78,
+        225,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "trailer_asset"
+          ]
+        },
+        {
+          "name": "trailer_asset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  105,
+                  108,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trailer_asset.mint",
+                "account": "TrailerAsset"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new_uri",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "TrailerAsset",
+      "discriminator": [
+        127,
+        224,
+        120,
+        14,
+        249,
+        250,
+        222,
+        207
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "TrailerAsset",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          },
+          {
+            "name": "series",
+            "type": "string"
+          },
+          {
+            "name": "total_value",
+            "type": "u64"
+          },
+          {
+            "name": "token_price",
+            "type": "u64"
+          },
+          {
+            "name": "total_tokens",
+            "type": "u16"
+          },
+          {
+            "name": "tokens_sold",
+            "type": "u16"
+          },
+          {
+            "name": "apy",
+            "type": "u16"
+          },
+          {
+            "name": "term_years",
+            "type": "u8"
+          },
+          {
+            "name": "is_locked",
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "expiry_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}
